@@ -1,0 +1,19 @@
+# Backend
+backend/target/
+backend/.env
+backend/.env.*
+!backend/.env.example
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+!frontend/.env.example
+
+# General
+.DS_Store
+*.log
+.idea/
+.vscode/
+*.iml
