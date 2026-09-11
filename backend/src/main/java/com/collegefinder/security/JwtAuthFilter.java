@@ -23,32 +23,76 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private final CustomUserDetailsService userDetailsService;
 
     @Override
-    protected void doFilterInternal(@NonNull HttpServletRequest request,
-                                     @NonNull HttpServletResponse response,
-                                     @NonNull FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(
+            @NonNull HttpServletRequest request,
+            @NonNull HttpServletResponse response,
+            @NonNull FilterChain filterChain)
+            throws ServletException, IOException {
+
+        // --------------------------------------------------
+        // IMPORTANT:
+        // CORS preflight requests use OPTIONS.
+        // They should NOT require JWT authentication.
+        // --------------------------------------------------
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        // Get Authorization header
         String header = request.getHeader("Authorization");
 
+        // No JWT token -> continue normally
         if (header == null || !header.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
 
+        // Extract token
         String token = header.substring(7);
+
         try {
+            // Extract email from JWT
             String email = jwtUtil.extractEmail(token);
-            if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                UserDetails userDetails = userDetailsService.loadUserByUsername(email);
-                if (jwtUtil.isTokenValid(token, userDetails.getUsername())) {
+
+            if (email != null
+                    && SecurityContextHolder.getContext().getAuthentication() == null) {
+
+                // Load user
+                UserDetails userDetails =
+                        userDetailsService.loadUserByUsername(email);
+
+                // Validate token
+                if (jwtUtil.isTokenValid(
+                        token,
+                        userDetails.getUsername())) {
+
                     UsernamePasswordAuthenticationToken authToken =
-                            new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                            new UsernamePasswordAuthenticationToken(
+                                    userDetails,
+                                    null,
+                                    userDetails.getAuthorities()
+                            );
+
+                    authToken.setDetails(
+                            new WebAuthenticationDetailsSource()
+                                    .buildDetails(request)
+                    );
+
+                    SecurityContextHolder
+                            .getContext()
+                            .setAuthentication(authToken);
                 }
             }
+
         } catch (Exception ignored) {
-            // invalid/expired token -> request proceeds unauthenticated, endpoint security decides access
+            // Invalid/expired JWT.
+            // Continue as unauthenticated.
+            // Spring Security will decide whether the endpoint
+            // requires authentication.
         }
 
+        // Continue request
         filterChain.doFilter(request, response);
     }
 }
