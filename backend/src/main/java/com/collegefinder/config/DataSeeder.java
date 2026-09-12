@@ -1,3 +1,4 @@
+```java
 package com.collegefinder.config;
 
 import com.collegefinder.entity.College;
@@ -34,16 +35,21 @@ public class DataSeeder implements CommandLineRunner {
     public void run(String... args) {
 
         log.info("==========================================");
-        log.info("Starting College Dataset Seeder");
+        log.info("Starting College Dataset Import");
         log.info("==========================================");
 
         try {
 
+            /*
+             * CSV location:
+             *
+             * backend/src/main/resources/data/college_dataset.csv
+             */
             ClassPathResource resource =
                     new ClassPathResource("data/college_dataset.csv");
 
             if (!resource.exists()) {
-                log.error("college_dataset.csv not found!");
+                log.error("college_dataset.csv was not found!");
                 return;
             }
 
@@ -69,41 +75,75 @@ public class DataSeeder implements CommandLineRunner {
                     try {
 
                         College college = College.builder()
+
                                 .id(parseLong(r.get("id")))
-                                .collegeName(r.get("college_name"))
-                                .city(r.get("city"))
-                                .state(r.get("state"))
-                                .institutionType(r.get("institution_type"))
-                                .courses(r.get("courses"))
+
+                                .collegeName(
+                                        r.get("college_name")
+                                )
+
+                                .city(
+                                        r.get("city")
+                                )
+
+                                .state(
+                                        r.get("state")
+                                )
+
+                                .institutionType(
+                                        r.get("institution_type")
+                                )
+
+                                .courses(
+                                        r.get("courses")
+                                )
+
                                 .annualFeeLakh(
                                         parseDecimal(
                                                 r.get("annual_fee_lakh_approx")
                                         )
                                 )
-                                .cutoffExam(r.get("cutoff_exam"))
-                                .cutoffNote(r.get("cutoff_note"))
+
+                                .cutoffExam(
+                                        r.get("cutoff_exam")
+                                )
+
+                                .cutoffNote(
+                                        r.get("cutoff_note")
+                                )
+
                                 .placementRatePct(
                                         parseDecimal(
                                                 r.get("placement_rate_pct_approx")
                                         )
                                 )
+
                                 .averagePackageLpa(
                                         parseDecimal(
                                                 r.get("average_package_lpa_approx")
                                         )
                                 )
+
                                 .highestPackageApprox(
                                         r.get("highest_package_approx")
                                 )
+
                                 .rating(
                                         parseDecimal(
                                                 r.get("rating_demo_out_of_5")
                                         )
                                 )
+
                                 .hostel(
-                                        parseBoolean(r.get("hostel"))
+                                        parseBoolean(
+                                                r.get("hostel")
+                                        )
                                 )
-                                .website(r.get("website"))
+
+                                .website(
+                                        r.get("website")
+                                )
+
                                 .nirfRank(
                                         parseInt(
                                                 r.get(
@@ -111,24 +151,38 @@ public class DataSeeder implements CommandLineRunner {
                                                 )
                                         )
                                 )
-                                .dataStatus(r.get("data_status"))
+
+                                .dataStatus(
+                                        r.get("data_status")
+                                )
+
                                 .dataReferenceYear(
                                         parseInt(
-                                                r.get(
-                                                        "data_reference_year"
-                                                )
+                                                r.get("data_reference_year")
                                         )
                                 )
+
                                 .build();
 
+
+                        /*
+                         * Get latitude and longitude
+                         * based on the college city.
+                         */
                         double[] coordinates =
                                 CityCoordinates.lookup(
                                         college.getCity()
                                 );
 
                         if (coordinates != null) {
-                            college.setLatitude(coordinates[0]);
-                            college.setLongitude(coordinates[1]);
+
+                            college.setLatitude(
+                                    coordinates[0]
+                            );
+
+                            college.setLongitude(
+                                    coordinates[1]
+                            );
                         }
 
                         colleges.add(college);
@@ -144,10 +198,13 @@ public class DataSeeder implements CommandLineRunner {
                 }
             }
 
+            /*
+             * Make sure the CSV actually contains data.
+             */
             if (colleges.isEmpty()) {
 
                 log.error(
-                        "No valid college records found. "
+                        "No valid college records found in CSV. "
                                 + "Database was NOT changed."
                 );
 
@@ -162,39 +219,56 @@ public class DataSeeder implements CommandLineRunner {
             /*
              * IMPORTANT:
              *
-             * Do NOT use deleteAll().
+             * DO NOT use:
              *
-             * Recommendations reference colleges using foreign keys.
-             * Deleting colleges would violate those constraints.
+             * collegeRepository.deleteAll();
              *
-             * saveAll() with the same IDs will update existing records
-             * and insert new records.
+             * because recommendations reference colleges
+             * through foreign keys.
+             *
+             * saveAll() will:
+             *
+             * - update existing IDs
+             * - insert new IDs
              */
-
             collegeRepository.saveAll(colleges);
 
+            /*
+             * Flush changes to the database.
+             */
+            collegeRepository.flush();
+
+            long total =
+                    collegeRepository.count();
+
             log.info(
-                    "Successfully synchronized {} colleges.",
+                    "Successfully imported/updated {} colleges.",
                     colleges.size()
             );
 
+            log.info(
+                    "Total colleges currently in database: {}",
+                    total
+            );
+
             log.info("==========================================");
-            log.info("College Dataset Seeder Completed");
+            log.info("College Dataset Import Completed");
             log.info("==========================================");
 
         } catch (Exception e) {
 
             log.error(
-                    "College Dataset Seeder Failed!",
+                    "College dataset import failed!",
                     e
             );
 
             throw new RuntimeException(
-                    "College dataset seeding failed",
+                    "College dataset import failed",
                     e
             );
         }
     }
+
 
     private BigDecimal parseDecimal(String value) {
 
@@ -203,15 +277,22 @@ public class DataSeeder implements CommandLineRunner {
         }
 
         try {
-            return new BigDecimal(value.trim());
+
+            return new BigDecimal(
+                    value.trim()
+            );
+
         } catch (NumberFormatException e) {
+
             log.warn(
                     "Invalid decimal value: {}",
                     value
             );
+
             return null;
         }
     }
+
 
     private Integer parseInt(String value) {
 
@@ -220,32 +301,46 @@ public class DataSeeder implements CommandLineRunner {
         }
 
         try {
-            return Integer.parseInt(value.trim());
+
+            return Integer.parseInt(
+                    value.trim()
+            );
+
         } catch (NumberFormatException e) {
+
             log.warn(
                     "Invalid integer value: {}",
                     value
             );
+
             return null;
         }
     }
 
+
     private Long parseLong(String value) {
 
         if (value == null || value.isBlank()) {
+
             throw new IllegalArgumentException(
                     "College ID cannot be empty"
             );
         }
 
         try {
-            return Long.parseLong(value.trim());
+
+            return Long.parseLong(
+                    value.trim()
+            );
+
         } catch (NumberFormatException e) {
+
             throw new IllegalArgumentException(
                     "Invalid college ID: " + value
             );
         }
     }
+
 
     private boolean parseBoolean(String value) {
 
