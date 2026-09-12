@@ -1,4 +1,3 @@
-```java
 package com.collegefinder.config;
 
 import com.collegefinder.entity.College;
