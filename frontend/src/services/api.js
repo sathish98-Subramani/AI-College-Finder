@@ -2,7 +2,10 @@ import axios from 'axios'
 
 const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'
 
-const api = axios.create({ baseURL })
+const api = axios.create({
+  baseURL,
+  timeout: 60000,
+})
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('cf_token')
